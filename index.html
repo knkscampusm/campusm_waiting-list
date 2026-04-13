@@ -9,10 +9,8 @@
 <!-- Firebase -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
-    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, collection, doc, setDoc, getDoc, getDocs,
-           addDoc, updateDoc, query, orderBy, where, serverTimestamp, writeBatch }
+           addDoc, updateDoc, query, orderBy, serverTimestamp }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -25,871 +23,301 @@
   };
 
   const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
   const db = getFirestore(app);
-
-  window._auth = auth;
   window._db = db;
-  window._firebase = { signInWithEmailAndPassword, signOut, onAuthStateChanged,
-    collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc,
-    query, orderBy, where, serverTimestamp, writeBatch };
+  window._firebase = { collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, query, orderBy, serverTimestamp };
 
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      document.getElementById('loginScreen').style.display = 'none';
-      document.getElementById('appScreen').style.display = 'flex';
-      document.getElementById('userEmail').textContent = user.email;
-      if (window.appInit) window.appInit();
-    } else {
-      document.getElementById('loginScreen').style.display = 'flex';
-      document.getElementById('appScreen').style.display = 'none';
-    }
-  });
+  document.addEventListener('DOMContentLoaded', () => { if (window.appInit) window.appInit(); });
 </script>
 
-<!-- XLSX -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <style>
 :root {
-  --bg: #0d0f14;
-  --surface: #161920;
-  --surface2: #1e2230;
-  --border: #2a2f3d;
-  --accent: #4f8ef7;
-  --accent2: #e85d75;
-  --accent3: #3ecf8e;
-  --accent4: #f5a623;
-  --text: #e8eaf0;
-  --text2: #8b91a8;
-  --text3: #4a5068;
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --surface2: #f0f2f5;
+  --border: #e2e6ec;
+  --accent: #2563eb;
+  --accent2: #e63950;
+  --accent3: #10b981;
+  --accent4: #f59e0b;
+  --text: #1a1d23;
+  --text2: #6b7280;
   --radius: 10px;
   --mono: 'DM Mono', monospace;
+  --shadow: 0 1px 4px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.05);
 }
-
 * { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Noto Sans KR',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; font-size:14px; }
 
-body {
-  font-family: 'Noto Sans KR', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  font-size: 14px;
-}
+.topbar { background:var(--surface); border-bottom:1px solid var(--border); padding:0 24px; height:56px; display:flex; align-items:center; gap:20px; position:sticky; top:0; z-index:100; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+.topbar-brand { font-size:15px; font-weight:800; display:flex; align-items:center; gap:8px; white-space:nowrap; }
+.topbar-brand .tag { background:var(--accent); color:white; font-size:10px; padding:2px 8px; border-radius:10px; font-weight:700; }
+.nav-tabs { display:flex; gap:2px; }
+.nav-tab { padding:7px 16px; border-radius:8px; font-size:13px; font-weight:600; color:var(--text2); cursor:pointer; transition:all .18s; border:none; background:none; font-family:inherit; }
+.nav-tab:hover { color:var(--text); background:var(--surface2); }
+.nav-tab.active { color:var(--accent); background:#eff4ff; }
 
-/* ── LOGIN ── */
-#loginScreen {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  background: radial-gradient(ellipse at 30% 50%, #1a1f35 0%, var(--bg) 70%);
-}
+.app-content { padding:24px; max-width:1440px; margin:0 auto; }
+.panel { display:none; } .panel.active { display:block; }
+.section-title { font-size:20px; font-weight:800; margin-bottom:4px; }
+.section-sub { font-size:13px; color:var(--text2); margin-bottom:20px; }
 
-.login-box {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 48px 40px;
-  width: 380px;
-  box-shadow: 0 24px 80px rgba(0,0,0,0.5);
-}
+.card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:16px; box-shadow:var(--shadow); }
+.card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.card-title { font-size:14px; font-weight:700; display:flex; align-items:center; gap:8px; }
+.card-title .dot { width:8px; height:8px; border-radius:50%; background:var(--accent); flex-shrink:0; }
 
-.login-logo {
-  text-align: center;
-  margin-bottom: 32px;
-}
+.upload-area { border:2px dashed var(--border); border-radius:var(--radius); padding:28px; text-align:center; cursor:pointer; transition:all .2s; position:relative; background:var(--bg); }
+.upload-area:hover { border-color:var(--accent); background:#eff4ff; }
+.upload-area input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.upload-area .icon { font-size:28px; margin-bottom:8px; }
+.upload-area p { font-size:13px; color:var(--text2); }
+.upload-area strong { color:var(--accent); }
 
-.login-logo .badge {
-  display: inline-block;
-  background: linear-gradient(135deg, var(--accent), #7b5ef8);
-  color: white;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  padding: 4px 12px;
-  border-radius: 20px;
-  margin-bottom: 12px;
-  text-transform: uppercase;
-}
+.filter-bar { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+.filter-group { display:flex; flex-direction:column; gap:4px; }
+.filter-group label { font-size:11px; color:var(--text2); font-weight:600; letter-spacing:.3px; text-transform:uppercase; }
 
-.login-logo h1 {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.4;
-}
+select, input[type="date"], input[type="number"], input[type="text"] { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px 12px; color:var(--text); font-size:13px; font-family:inherit; transition:border-color .2s; min-width:120px; }
+select:focus, input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,.1); }
 
-.login-logo p { font-size: 12px; color: var(--text2); margin-top: 4px; }
+.btn { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; transition:all .18s; border:none; white-space:nowrap; }
+.btn-blue { background:var(--accent); color:white; } .btn-blue:hover { background:#1d4ed8; }
+.btn-green { background:var(--accent3); color:white; } .btn-green:hover { background:#059669; }
+.btn-ghost { background:white; color:var(--text2); border:1px solid var(--border); } .btn-ghost:hover { color:var(--text); border-color:#adb5c5; }
+.btn-yellow { background:var(--accent4); color:white; } .btn-yellow:hover { background:#d97706; }
+.btn-sm { padding:6px 12px; font-size:12px; }
 
-.form-group { margin-bottom: 16px; }
-.form-group label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 6px; font-weight: 500; }
-.form-group input {
-  width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 12px 14px;
-  color: var(--text);
-  font-size: 14px;
-  font-family: inherit;
-  transition: border-color .2s;
-}
-.form-group input:focus { outline: none; border-color: var(--accent); }
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+thead th { background:var(--surface2); padding:9px 12px; text-align:left; font-size:11px; font-weight:700; color:var(--text2); letter-spacing:.5px; text-transform:uppercase; border-bottom:1px solid var(--border); white-space:nowrap; }
+tbody tr { border-bottom:1px solid var(--border); transition:background .12s; }
+tbody tr:hover { background:#f8f9fc; }
+tbody td { padding:10px 12px; white-space:nowrap; }
+tbody tr:last-child { border-bottom:none; }
 
-.btn-primary {
-  width: 100%;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: var(--radius);
-  padding: 13px;
-  font-size: 14px;
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  transition: opacity .2s, transform .1s;
-  margin-top: 8px;
-}
-.btn-primary:hover { opacity: .9; }
-.btn-primary:active { transform: scale(.98); }
+.badge-pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:700; }
+.badge-male    { background:#eff4ff; color:#2563eb; }
+.badge-female  { background:#fff0f3; color:#e63950; }
+.badge-priority{ background:#fffbeb; color:#d97706; border:1px solid #fcd34d; }
+.badge-normal  { background:var(--surface2); color:var(--text2); }
+.badge-called  { background:#ecfdf5; color:#059669; }
+.badge-nocall  { background:#fff0f3; color:#e63950; }
+.badge-enrolled{ background:#eff4ff; color:#2563eb; }
+.badge-medical      { background:#fff0f3; color:#e63950; }
+.badge-priority-type{ background:#fffbeb; color:#d97706; }
+.badge-first        { background:#eff4ff; color:#2563eb; }
+.badge-interview    { background:#ecfdf5; color:#059669; }
+.badge-special      { background:#f5f3ff; color:#7c3aed; }
 
-.login-error {
-  background: rgba(232,93,117,.1);
-  border: 1px solid rgba(232,93,117,.3);
-  color: var(--accent2);
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 13px;
-  margin-top: 12px;
-  display: none;
-}
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:20px; }
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 20px; box-shadow:var(--shadow); }
+.stat-card .label { font-size:11px; color:var(--text2); font-weight:600; margin-bottom:8px; text-transform:uppercase; }
+.stat-card .value { font-size:32px; font-weight:800; font-family:var(--mono); }
+.stat-blue  { border-top:3px solid var(--accent); }
+.stat-green { border-top:3px solid var(--accent3); }
+.stat-red   { border-top:3px solid var(--accent2); }
+.stat-yellow{ border-top:3px solid var(--accent4); }
 
-/* ── APP LAYOUT ── */
-#appScreen {
-  display: none;
-  flex-direction: column;
-  min-height: 100vh;
-}
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+@media(max-width:768px){.two-col{grid-template-columns:1fr;}}
 
-.topbar {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 0 24px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
+.vacancy-card { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:8px; }
+.vacancy-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.vacancy-row label { font-size:12px; color:var(--text2); font-weight:500; }
+.vacancy-input { width:70px; background:white; border:1px solid var(--border); border-radius:6px; padding:5px 8px; color:var(--text); font-size:13px; font-family:var(--mono); text-align:center; }
+.vacancy-input:focus { outline:none; border-color:var(--accent); }
 
-.topbar-left { display: flex; align-items: center; gap: 16px; }
-.topbar-brand {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.topbar-brand span {
-  background: linear-gradient(135deg, var(--accent), #7b5ef8);
-  color: white;
-  font-size: 10px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-weight: 700;
-}
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; z-index:200; padding:24px; }
+.modal-overlay.open { display:flex; }
+.modal { background:white; border:1px solid var(--border); border-radius:16px; padding:28px; width:100%; max-width:500px; max-height:85vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+.modal h3 { font-size:16px; font-weight:800; margin-bottom:20px; }
+.modal .fg { margin-bottom:14px; }
+.modal .fg label { display:block; font-size:11px; color:var(--text2); font-weight:600; margin-bottom:5px; text-transform:uppercase; }
+.modal .fg select, .modal .fg input, .modal .fg textarea { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 12px; color:var(--text); font-size:13px; font-family:inherit; }
+.modal .fg textarea { resize:vertical; min-height:80px; }
+.modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; }
 
-.nav-tabs {
-  display: flex;
-  gap: 4px;
-}
-.nav-tab {
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text2);
-  cursor: pointer;
-  transition: all .2s;
-  border: none;
-  background: none;
-  font-family: inherit;
-}
-.nav-tab:hover { color: var(--text); background: var(--surface2); }
-.nav-tab.active { color: var(--accent); background: rgba(79,142,247,.1); }
+.toast { position:fixed; bottom:24px; right:24px; background:white; border:1px solid var(--border); border-radius:10px; padding:12px 20px; font-size:13px; font-weight:600; box-shadow:0 8px 32px rgba(0,0,0,.15); z-index:300; transform:translateY(80px); opacity:0; transition:all .3s; }
+.toast.show { transform:translateY(0); opacity:1; }
+.toast.success { border-left:4px solid var(--accent3); }
+.toast.error   { border-left:4px solid var(--accent2); }
 
-.topbar-right { display: flex; align-items: center; gap: 12px; }
-#userEmail { font-size: 12px; color: var(--text2); font-family: var(--mono); }
-.btn-logout {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--text2);
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  cursor: pointer;
-  font-family: inherit;
-  transition: all .2s;
-}
-.btn-logout:hover { border-color: var(--accent2); color: var(--accent2); }
-
-.app-content {
-  flex: 1;
-  padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-/* ── PANELS ── */
-.panel { display: none; }
-.panel.active { display: block; }
-
-/* ── CARDS ── */
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px;
-  margin-bottom: 16px;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.card-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.card-title .dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--accent);
-}
-
-/* ── UPLOAD AREA ── */
-.upload-area {
-  border: 2px dashed var(--border);
-  border-radius: var(--radius);
-  padding: 32px;
-  text-align: center;
-  cursor: pointer;
-  transition: all .2s;
-  position: relative;
-}
-.upload-area:hover { border-color: var(--accent); background: rgba(79,142,247,.04); }
-.upload-area input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.upload-area .icon { font-size: 32px; margin-bottom: 8px; }
-.upload-area p { font-size: 13px; color: var(--text2); }
-.upload-area strong { color: var(--accent); }
-
-/* ── FILTER BAR ── */
-.filter-bar {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: flex-end;
-}
-
-.filter-group { display: flex; flex-direction: column; gap: 4px; }
-.filter-group label { font-size: 11px; color: var(--text2); font-weight: 500; }
-
-select, input[type="date"], input[type="number"], input[type="text"] {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 12px;
-  color: var(--text);
-  font-size: 13px;
-  font-family: inherit;
-  transition: border-color .2s;
-  min-width: 120px;
-}
-select:focus, input:focus { outline: none; border-color: var(--accent); }
-
-.btn {
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  transition: all .2s;
-  border: none;
-}
-.btn-blue { background: var(--accent); color: white; }
-.btn-blue:hover { opacity: .85; }
-.btn-green { background: var(--accent3); color: #0d1f17; }
-.btn-green:hover { opacity: .85; }
-.btn-red { background: var(--accent2); color: white; }
-.btn-red:hover { opacity: .85; }
-.btn-ghost { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
-.btn-ghost:hover { color: var(--text); border-color: var(--text3); }
-.btn-yellow { background: var(--accent4); color: #1a0f00; }
-.btn-yellow:hover { opacity: .85; }
-
-/* ── TABLE ── */
-.table-wrap { overflow-x: auto; }
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-thead th {
-  background: var(--surface2);
-  padding: 10px 12px;
-  text-align: left;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text2);
-  letter-spacing: .5px;
-  text-transform: uppercase;
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-
-tbody tr {
-  border-bottom: 1px solid var(--border);
-  transition: background .15s;
-}
-tbody tr:hover { background: var(--surface2); }
-tbody td {
-  padding: 10px 12px;
-  color: var(--text);
-  white-space: nowrap;
-}
-
-.badge-pill {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 600;
-}
-.badge-male { background: rgba(79,142,247,.15); color: var(--accent); }
-.badge-female { background: rgba(232,93,117,.15); color: var(--accent2); }
-.badge-priority { background: rgba(245,166,35,.15); color: var(--accent4); }
-.badge-normal { background: var(--surface2); color: var(--text2); }
-.badge-called { background: rgba(62,207,142,.15); color: var(--accent3); }
-.badge-nocall { background: rgba(232,93,117,.15); color: var(--accent2); }
-.badge-enrolled { background: rgba(79,142,247,.15); color: var(--accent); }
-
-/* ── STATS GRID ── */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.stat-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px 20px;
-}
-.stat-card .label { font-size: 11px; color: var(--text2); font-weight: 500; margin-bottom: 8px; }
-.stat-card .value { font-size: 28px; font-weight: 700; font-family: var(--mono); }
-.stat-card .sub { font-size: 11px; color: var(--text2); margin-top: 4px; }
-.stat-blue { border-left: 3px solid var(--accent); }
-.stat-green { border-left: 3px solid var(--accent3); }
-.stat-red { border-left: 3px solid var(--accent2); }
-.stat-yellow { border-left: 3px solid var(--accent4); }
-
-/* ── VACANCY TABLE ── */
-.vacancy-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
-}
-
-.vacancy-card {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-}
-.vacancy-card .v-name { font-size: 13px; font-weight: 700; margin-bottom: 12px; color: var(--text); }
-.vacancy-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.vacancy-row label { font-size: 12px; color: var(--text2); }
-.vacancy-input {
-  width: 70px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 4px 8px;
-  color: var(--text);
-  font-size: 13px;
-  font-family: var(--mono);
-  text-align: center;
-}
-.vacancy-input:focus { outline: none; border-color: var(--accent); }
-
-/* ── MODAL ── */
-.modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,.7);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-  padding: 24px;
-}
-.modal-overlay.open { display: flex; }
-.modal {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 28px;
-  width: 100%;
-  max-width: 500px;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-.modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 20px; }
-.modal .form-group { margin-bottom: 14px; }
-.modal .form-group label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 5px; }
-.modal .form-group select,
-.modal .form-group input,
-.modal .form-group textarea {
-  width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 12px;
-  color: var(--text);
-  font-size: 13px;
-  font-family: inherit;
-}
-.modal .form-group textarea { resize: vertical; min-height: 80px; }
-.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
-
-/* ── TOAST ── */
-.toast {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 20px;
-  font-size: 13px;
-  color: var(--text);
-  box-shadow: 0 8px 32px rgba(0,0,0,.4);
-  z-index: 300;
-  transform: translateY(80px);
-  opacity: 0;
-  transition: all .3s;
-}
-.toast.show { transform: translateY(0); opacity: 1; }
-.toast.success { border-left: 3px solid var(--accent3); }
-.toast.error { border-left: 3px solid var(--accent2); }
-
-/* ── EMPTY STATE ── */
-.empty-state {
-  text-align: center;
-  padding: 48px 24px;
-  color: var(--text2);
-}
-.empty-state .icon { font-size: 40px; margin-bottom: 12px; }
-.empty-state p { font-size: 14px; }
-
-/* 순번 강조 */
-.rank-num {
-  font-family: var(--mono);
-  font-weight: 600;
-  color: var(--accent4);
-}
-
-.priority-row td { background: rgba(245,166,35,.04) !important; }
-
-.section-title {
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 4px;
-}
-.section-sub { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
-
-/* 전형별 색상 */
-.badge-medical { background: rgba(232,93,117,.15); color: #e85d75; }
-.badge-priority-type { background: rgba(245,166,35,.15); color: #f5a623; }
-.badge-first { background: rgba(79,142,247,.15); color: #4f8ef7; }
-.badge-interview { background: rgba(62,207,142,.15); color: #3ecf8e; }
-.badge-special { background: rgba(123,94,248,.15); color: #7b5ef8; }
-
-.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
-
-.info-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  background: var(--surface2);
-  border-radius: 6px;
-  font-size: 11px;
-  color: var(--text2);
-  margin-right: 4px;
-}
-
-/* 탭 내 서브탭 */
-.sub-tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
-.sub-tab { padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--text2); cursor: pointer; border: none; background: none; font-family: inherit; transition: all .2s; }
-.sub-tab:hover { color: var(--text); }
-.sub-tab.active { background: var(--accent); color: white; }
+.rank-num { font-family:var(--mono); font-weight:700; color:var(--accent4); }
+.priority-row td { background:#fffdf0 !important; }
+.info-chip { display:inline-block; padding:2px 8px; background:var(--surface2); border-radius:6px; font-size:11px; color:var(--text2); margin-right:3px; }
+.empty-state { text-align:center; padding:48px 24px; color:var(--text2); }
+.empty-state .icon { font-size:36px; margin-bottom:10px; }
+.vacancy-info-bar { margin-top:14px; padding:10px 14px; background:#eff4ff; border-radius:8px; font-size:12px; color:var(--text2); border:1px solid #bfdbfe; }
 </style>
 </head>
 <body>
 
-<!-- ── LOGIN ── -->
-<div id="loginScreen">
-  <div class="login-box">
-    <div class="login-logo">
-      <div class="badge">강남대성기숙</div>
-      <h1>의대관<br>대기자 관리 시스템</h1>
-      <p>Waiting List Management</p>
-    </div>
-    <div class="form-group">
-      <label>이메일</label>
-      <input type="email" id="loginEmail" placeholder="이메일 입력">
-    </div>
-    <div class="form-group">
-      <label>비밀번호</label>
-      <input type="password" id="loginPw" placeholder="비밀번호 입력"
-        onkeydown="if(event.key==='Enter') doLogin()">
-    </div>
-    <button class="btn-primary" onclick="doLogin()">로그인</button>
-    <div class="login-error" id="loginError"></div>
-  </div>
+<div class="topbar">
+  <div class="topbar-brand">강남대성기숙 의대관 <span class="tag">대기자 관리</span></div>
+  <nav class="nav-tabs">
+    <button class="nav-tab active" onclick="showPanel('waiting',this)">대기자 목록</button>
+    <button class="nav-tab" onclick="showPanel('vacancy',this)">여석 관리</button>
+    <button class="nav-tab" onclick="showPanel('history',this)">호출 이력</button>
+    <button class="nav-tab" onclick="showPanel('stats',this)">통계</button>
+  </nav>
 </div>
 
-<!-- ── APP ── -->
-<div id="appScreen">
-  <div class="topbar">
-    <div class="topbar-left">
-      <div class="topbar-brand">
-        강남대성기숙 의대관 <span>대기자 관리</span>
+<div class="app-content">
+
+  <!-- 대기자 목록 -->
+  <div class="panel active" id="panel-waiting">
+    <div class="section-title">대기자 목록</div>
+    <div class="section-sub">DSA에서 다운받은 엑셀을 업로드하여 조건에 맞는 대기자를 확인하세요</div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-title"><div class="dot"></div>엑셀 파일 업로드</div></div>
+      <div class="upload-area">
+        <input type="file" id="excelFile" accept=".xlsx,.xls" onchange="handleExcelUpload(event)">
+        <div class="icon">📂</div>
+        <p><strong>클릭하여 파일 선택</strong> 또는 여기에 드래그</p>
+        <p style="margin-top:5px;font-size:12px;">DSA 대기자 접수 엑셀 파일 (.xlsx)</p>
       </div>
-      <nav class="nav-tabs">
-        <button class="nav-tab active" onclick="showPanel('waiting')">대기자 목록</button>
-        <button class="nav-tab" onclick="showPanel('vacancy')">여석 관리</button>
-        <button class="nav-tab" onclick="showPanel('history')">호출 이력</button>
-        <button class="nav-tab" onclick="showPanel('stats')">통계</button>
-      </nav>
+      <div id="uploadStatus" style="margin-top:12px;font-size:13px;color:var(--text2);"></div>
     </div>
-    <div class="topbar-right">
-      <span id="userEmail"></span>
-      <button class="btn-logout" onclick="doLogout()">로그아웃</button>
+
+    <div class="card" id="filterCard" style="display:none;">
+      <div class="card-header">
+        <div class="card-title"><div class="dot" style="background:var(--accent3)"></div>필터 조건</div>
+        <button class="btn btn-blue" onclick="applyFilter()">필터 적용</button>
+      </div>
+      <div class="filter-bar">
+        <div class="filter-group"><label>성별</label>
+          <select id="fGender"><option value="">전체</option><option value="남">남자</option><option value="여">여자</option></select></div>
+        <div class="filter-group"><label>전형</label>
+          <select id="fType"><option value="">전체</option><option value="메디컬">메디컬</option><option value="우선선발">우선선발</option><option value="선착순">선착순</option><option value="면접">면접</option><option value="특별">특별</option></select></div>
+        <div class="filter-group"><label>기숙사 유형</label>
+          <select id="fRoom"><option value="">전체</option><option value="1인실">1인실 신청</option><option value="일반">일반실</option></select></div>
+        <div class="filter-group"><label>우선순위</label>
+          <select id="fPriority"><option value="">전체</option><option value="Y">우선순위만</option><option value="N">일반만</option></select></div>
+        <div class="filter-group"><label>입소희망일 기준</label><input type="date" id="fDate"></div>
+        <div class="filter-group"><label>선택과목 제외</label><input type="text" id="fExcludeSubject" placeholder="예: 기하" style="width:110px;"></div>
+      </div>
+      <div class="vacancy-info-bar" id="vacancyInfo">💡 여석 현황을 확인하려면 <strong style="color:var(--accent);">여석 관리</strong> 탭에서 먼저 입력해주세요</div>
+    </div>
+
+    <div class="card" id="resultCard" style="display:none;">
+      <div class="card-header">
+        <div class="card-title"><div class="dot" style="background:var(--accent4)"></div>필터 결과 <span id="resultCount" style="font-size:12px;color:var(--text2);font-weight:400;margin-left:4px;"></span></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost btn-sm" onclick="toggleSort()">순번순 ↕</button>
+          <button class="btn btn-yellow btn-sm" onclick="exportResult()">엑셀 저장</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr>
+          <th>우선</th><th>순번</th><th>성명</th><th>성별</th><th>전형</th>
+          <th>연락처(학생)</th><th>연락처(학부모)</th><th>입소희망일</th>
+          <th>수학선택</th><th>탐구선택</th><th>비고</th><th>호출상태</th><th>액션</th>
+        </tr></thead>
+        <tbody id="resultBody"></tbody></table>
+      </div>
+      <div id="resultEmpty" class="empty-state" style="display:none;"><div class="icon">🔍</div><p>조건에 맞는 대기자가 없습니다</p></div>
     </div>
   </div>
 
-  <div class="app-content">
-
-    <!-- ── 대기자 목록 패널 ── -->
-    <div class="panel active" id="panel-waiting">
-      <div class="section-title">대기자 목록</div>
-      <div class="section-sub">DSA에서 다운받은 엑셀을 업로드하여 조건에 맞는 대기자를 확인하세요</div>
-
+  <!-- 여석 관리 -->
+  <div class="panel" id="panel-vacancy">
+    <div class="section-title">여석 관리</div>
+    <div class="section-sub">기숙사 동별, 독서실 전형별 현재 여석을 입력하고 저장하세요</div>
+    <div class="two-col">
       <div class="card">
         <div class="card-header">
-          <div class="card-title"><div class="dot"></div>엑셀 파일 업로드</div>
+          <div class="card-title"><div class="dot" style="background:var(--accent2)"></div>기숙사 여석</div>
+          <button class="btn btn-ghost btn-sm" onclick="addDormBuilding()">+ 동 추가</button>
         </div>
-        <div class="upload-area" id="uploadArea">
-          <input type="file" id="excelFile" accept=".xlsx,.xls" onchange="handleExcelUpload(event)">
-          <div class="icon">📂</div>
-          <p><strong>클릭하여 파일 선택</strong> 또는 여기에 드래그</p>
-          <p style="margin-top:6px;font-size:12px;">DSA 대기자 접수 엑셀 파일 (.xlsx)</p>
-        </div>
-        <div id="uploadStatus" style="margin-top:12px;font-size:13px;color:var(--text2);"></div>
+        <div id="dormVacancy"></div>
+        <button class="btn btn-green" style="width:100%;margin-top:12px;" onclick="saveVacancy()">💾 저장</button>
       </div>
-
-      <div class="card" id="filterCard" style="display:none;">
-        <div class="card-header">
-          <div class="card-title"><div class="dot" style="background:var(--accent3)"></div>필터 조건</div>
-          <button class="btn btn-blue" onclick="applyFilter()">필터 적용</button>
-        </div>
-        <div class="filter-bar">
-          <div class="filter-group">
-            <label>성별</label>
-            <select id="fGender">
-              <option value="">전체</option>
-              <option value="남">남자</option>
-              <option value="여">여자</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label>전형</label>
-            <select id="fType">
-              <option value="">전체</option>
-              <option value="메디컬">메디컬</option>
-              <option value="우선선발">우선선발</option>
-              <option value="선착순">선착순</option>
-              <option value="면접">면접</option>
-              <option value="특별">특별</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label>기숙사 유형</label>
-            <select id="fRoom">
-              <option value="">전체</option>
-              <option value="1인실">1인실 신청</option>
-              <option value="일반">일반실</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label>우선순위</label>
-            <select id="fPriority">
-              <option value="">전체</option>
-              <option value="Y">우선순위만</option>
-              <option value="N">일반만</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label>입소희망일 기준</label>
-            <input type="date" id="fDate" value="">
-          </div>
-          <div class="filter-group">
-            <label>선택과목 제외</label>
-            <input type="text" id="fExcludeSubject" placeholder="예: 기하" style="width:100px">
-          </div>
-        </div>
-
-        <!-- 여석 현황 표시 -->
-        <div id="vacancyInfo" style="margin-top:16px;padding:12px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--text2);">
-          <span>💡 여석 현황을 확인하려면 <strong style="color:var(--accent);">여석 관리</strong> 탭에서 먼저 입력해주세요</span>
-        </div>
-      </div>
-
-      <div class="card" id="resultCard" style="display:none;">
-        <div class="card-header">
-          <div class="card-title"><div class="dot" style="background:var(--accent4)"></div>
-            필터 결과 <span id="resultCount" style="font-size:12px;color:var(--text2);font-weight:400;margin-left:6px;"></span>
-          </div>
-          <div style="display:flex;gap:8px;">
-            <button class="btn btn-ghost" onclick="toggleSort()">순번순 ↕</button>
-            <button class="btn btn-yellow" onclick="exportResult()">결과 저장</button>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table id="resultTable">
-            <thead>
-              <tr>
-                <th>우선</th>
-                <th>순번</th>
-                <th>성명</th>
-                <th>성별</th>
-                <th>전형</th>
-                <th>연락처</th>
-                <th>입소희망일</th>
-                <th>수학선택</th>
-                <th>탐구선택</th>
-                <th>비고</th>
-                <th>호출상태</th>
-                <th>액션</th>
-              </tr>
-            </thead>
-            <tbody id="resultBody"></tbody>
-          </table>
-        </div>
-        <div id="resultEmpty" class="empty-state" style="display:none;">
-          <div class="icon">🔍</div>
-          <p>조건에 맞는 대기자가 없습니다</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── 여석 관리 패널 ── -->
-    <div class="panel" id="panel-vacancy">
-      <div class="section-title">여석 관리</div>
-      <div class="section-sub">기숙사 동별, 독서실 구역별 현재 여석을 입력하고 저장하세요</div>
-
-      <div class="two-col">
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><div class="dot" style="background:var(--accent2)"></div>기숙사 여석</div>
-            <button class="btn btn-blue btn-sm" onclick="addDormBuilding()" style="padding:6px 12px;font-size:12px;">+ 동 추가</button>
-          </div>
-          <div id="dormVacancy"></div>
-          <button class="btn btn-green" style="width:100%;margin-top:12px;" onclick="saveVacancy()">저장</button>
-        </div>
-
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title"><div class="dot" style="background:var(--accent3)"></div>독서실 여석 (전형별)</div>
-            <button class="btn btn-blue" onclick="addReadingRoom()" style="padding:6px 12px;font-size:12px;">+ 전형 추가</button>
-          </div>
-          <div id="readingVacancy"></div>
-          <button class="btn btn-green" style="width:100%;margin-top:12px;" onclick="saveVacancy()">저장</button>
-        </div>
-      </div>
-
-      <!-- 여석 이력 -->
       <div class="card">
         <div class="card-header">
-          <div class="card-title"><div class="dot"></div>여석 변동 이력</div>
-          <button class="btn btn-ghost" onclick="loadVacancyHistory()">새로고침</button>
+          <div class="card-title"><div class="dot" style="background:var(--accent3)"></div>독서실 여석 (전형별)</div>
+          <button class="btn btn-ghost btn-sm" onclick="addReadingRoom()">+ 전형 추가</button>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>저장일시</th>
-                <th>저장자</th>
-                <th>기숙사 현황</th>
-                <th>독서실 현황</th>
-              </tr>
-            </thead>
-            <tbody id="vacancyHistoryBody"></tbody>
-          </table>
-        </div>
+        <div id="readingVacancy"></div>
+        <button class="btn btn-green" style="width:100%;margin-top:12px;" onclick="saveVacancy()">💾 저장</button>
       </div>
     </div>
-
-    <!-- ── 호출 이력 패널 ── -->
-    <div class="panel" id="panel-history">
-      <div class="section-title">호출 이력</div>
-      <div class="section-sub">호출된 대기자들의 결과를 확인하고 관리합니다</div>
-
-      <div class="card">
-        <div class="filter-bar" style="margin-bottom:0;">
-          <div class="filter-group">
-            <label>전형</label>
-            <select id="hfType">
-              <option value="">전체</option>
-              <option value="메디컬">메디컬</option>
-              <option value="우선선발">우선선발</option>
-              <option value="선착순">선착순</option>
-              <option value="면접">면접</option>
-              <option value="특별">특별</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label>결과</label>
-            <select id="hfResult">
-              <option value="">전체</option>
-              <option value="호출됨">호출됨(대기)</option>
-              <option value="미응답">미응답</option>
-              <option value="거절">거절</option>
-              <option value="입소확정">입소확정</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label>&nbsp;</label>
-            <button class="btn btn-blue" onclick="loadHistory()">검색</button>
-          </div>
-        </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><div class="dot"></div>여석 변동 이력</div>
+        <button class="btn btn-ghost btn-sm" onclick="loadVacancyHistory()">새로고침</button>
       </div>
-
-      <div class="card">
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>호출일시</th>
-                <th>성명</th>
-                <th>성별</th>
-                <th>전형</th>
-                <th>순번</th>
-                <th>연락처</th>
-                <th>호출자</th>
-                <th>결과</th>
-                <th>메모</th>
-                <th>수정</th>
-              </tr>
-            </thead>
-            <tbody id="historyBody"></tbody>
-          </table>
-        </div>
-        <div id="historyEmpty" class="empty-state" style="display:none;">
-          <div class="icon">📋</div>
-          <p>호출 이력이 없습니다</p>
-        </div>
-      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>저장일시</th><th>기숙사 현황</th><th>독서실 현황</th></tr></thead>
+        <tbody id="vacancyHistoryBody"></tbody>
+      </table></div>
     </div>
-
-    <!-- ── 통계 패널 ── -->
-    <div class="panel" id="panel-stats">
-      <div class="section-title">통계</div>
-      <div class="section-sub">호출 및 입소 현황을 한눈에 확인하세요</div>
-
-      <div class="stats-grid" id="statsGrid">
-        <div class="stat-card stat-blue"><div class="label">총 대기자</div><div class="value" id="sTotalWaiting">-</div></div>
-        <div class="stat-card stat-yellow"><div class="label">총 호출 수</div><div class="value" id="sTotalCalled">-</div></div>
-        <div class="stat-card stat-green"><div class="label">입소 확정</div><div class="value" id="sTotalEnrolled">-</div></div>
-        <div class="stat-card stat-red"><div class="label">미응답/거절</div><div class="value" id="sTotalFailed">-</div></div>
-      </div>
-
-      <div class="two-col">
-        <div class="card">
-          <div class="card-title" style="margin-bottom:16px;"><div class="dot"></div>전형별 호출 현황</div>
-          <table>
-            <thead>
-              <tr>
-                <th>전형</th>
-                <th>호출</th>
-                <th>입소확정</th>
-                <th>미응답</th>
-                <th>거절</th>
-                <th>전환율</th>
-              </tr>
-            </thead>
-            <tbody id="statsTypeBody"></tbody>
-          </table>
-        </div>
-        <div class="card">
-          <div class="card-title" style="margin-bottom:16px;"><div class="dot" style="background:var(--accent2)"></div>성별 호출 현황</div>
-          <table>
-            <thead>
-              <tr>
-                <th>성별</th>
-                <th>호출</th>
-                <th>입소확정</th>
-                <th>전환율</th>
-              </tr>
-            </thead>
-            <tbody id="statsGenderBody"></tbody>
-          </table>
-        </div>
-      </div>
-      <button class="btn btn-blue" onclick="loadStats()" style="margin-top:8px;">통계 새로고침</button>
-    </div>
-
   </div>
+
+  <!-- 호출 이력 -->
+  <div class="panel" id="panel-history">
+    <div class="section-title">호출 이력</div>
+    <div class="section-sub">호출된 대기자들의 결과를 확인하고 관리합니다</div>
+    <div class="card">
+      <div class="filter-bar">
+        <div class="filter-group"><label>전형</label>
+          <select id="hfType"><option value="">전체</option><option value="메디컬">메디컬</option><option value="우선선발">우선선발</option><option value="선착순">선착순</option><option value="면접">면접</option><option value="특별">특별</option></select></div>
+        <div class="filter-group"><label>결과</label>
+          <select id="hfResult"><option value="">전체</option><option value="호출됨">호출됨</option><option value="미응답">미응답</option><option value="거절">거절</option><option value="입소확정">입소확정</option></select></div>
+        <div class="filter-group"><label>&nbsp;</label><button class="btn btn-blue" onclick="loadHistory()">검색</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="table-wrap"><table>
+        <thead><tr><th>호출일시</th><th>성명</th><th>성별</th><th>전형</th><th>순번</th><th>연락처</th><th>결과</th><th>메모</th><th>수정</th></tr></thead>
+        <tbody id="historyBody"></tbody>
+      </table></div>
+      <div id="historyEmpty" class="empty-state" style="display:none;"><div class="icon">📋</div><p>호출 이력이 없습니다</p></div>
+    </div>
+  </div>
+
+  <!-- 통계 -->
+  <div class="panel" id="panel-stats">
+    <div class="section-title">통계</div>
+    <div class="section-sub">호출 및 입소 현황을 한눈에 확인하세요</div>
+    <div class="stats-grid">
+      <div class="stat-card stat-blue"><div class="label">총 대기자</div><div class="value" id="sTotalWaiting">-</div></div>
+      <div class="stat-card stat-yellow"><div class="label">총 호출 수</div><div class="value" id="sTotalCalled">-</div></div>
+      <div class="stat-card stat-green"><div class="label">입소 확정</div><div class="value" id="sTotalEnrolled">-</div></div>
+      <div class="stat-card stat-red"><div class="label">미응답/거절</div><div class="value" id="sTotalFailed">-</div></div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:16px;"><div class="dot"></div>전형별 호출 현황</div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>전형</th><th>호출</th><th>입소확정</th><th>미응답</th><th>거절</th><th>전환율</th></tr></thead>
+          <tbody id="statsTypeBody"></tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:16px;"><div class="dot" style="background:var(--accent2)"></div>성별 호출 현황</div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>성별</th><th>호출</th><th>입소확정</th><th>전환율</th></tr></thead>
+          <tbody id="statsGenderBody"></tbody>
+        </table></div>
+      </div>
+    </div>
+    <button class="btn btn-blue" onclick="loadStats()" style="margin-top:4px;">통계 새로고침</button>
+  </div>
+
 </div>
 
-<!-- ── 호출 처리 모달 ── -->
+<!-- 호출 처리 모달 -->
 <div class="modal-overlay" id="callModal">
   <div class="modal">
     <h3>📞 호출 처리</h3>
-    <div id="callStudentInfo" style="background:var(--bg);padding:12px;border-radius:8px;margin-bottom:16px;font-size:13px;"></div>
-    <div class="form-group">
-      <label>호출 결과</label>
-      <select id="callResult">
-        <option value="호출됨">호출됨 (연락 중)</option>
-        <option value="미응답">미응답</option>
-        <option value="거절">거절</option>
-        <option value="입소확정">입소 확정</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>메모 (선택)</label>
-      <textarea id="callMemo" placeholder="특이사항, 재연락 필요 등..."></textarea>
-    </div>
+    <div id="callStudentInfo" style="background:var(--bg);padding:14px;border-radius:8px;margin-bottom:16px;font-size:13px;border:1px solid var(--border);"></div>
+    <div class="fg"><label>호출 결과</label>
+      <select id="callResult"><option value="호출됨">호출됨 (연락 중)</option><option value="미응답">미응답</option><option value="거절">거절</option><option value="입소확정">입소 확정</option></select></div>
+    <div class="fg"><label>메모 (선택)</label><textarea id="callMemo" placeholder="특이사항, 재연락 필요 등..."></textarea></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('callModal')">취소</button>
       <button class="btn btn-green" onclick="saveCall()">저장</button>
@@ -897,628 +325,362 @@ tbody td {
   </div>
 </div>
 
-<!-- ── 이력 수정 모달 ── -->
+<!-- 이력 수정 모달 -->
 <div class="modal-overlay" id="editModal">
   <div class="modal">
     <h3>✏️ 결과 수정</h3>
     <input type="hidden" id="editDocId">
-    <div class="form-group">
-      <label>호출 결과</label>
-      <select id="editResult">
-        <option value="호출됨">호출됨 (연락 중)</option>
-        <option value="미응답">미응답</option>
-        <option value="거절">거절</option>
-        <option value="입소확정">입소 확정</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>메모</label>
-      <textarea id="editMemo"></textarea>
-    </div>
+    <div class="fg"><label>호출 결과</label>
+      <select id="editResult"><option value="호출됨">호출됨 (연락 중)</option><option value="미응답">미응답</option><option value="거절">거절</option><option value="입소확정">입소 확정</option></select></div>
+    <div class="fg"><label>메모</label><textarea id="editMemo"></textarea></div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('editModal')">취소</button>
-      <button class="btn btn-blue" onclick="updateCall()">수정</button>
+      <button class="btn btn-blue" onclick="updateCall()">수정 완료</button>
     </div>
   </div>
 </div>
 
-<!-- ── TOAST ── -->
 <div class="toast" id="toast"></div>
 
 <script>
-// ── 전역 상태 ──
-let rawData = [];         // 업로드된 엑셀 원본
-let filteredData = [];    // 필터 결과
-let callHistory = {};     // 이미 호출된 학생 (수험번호 → 결과)
-let currentCallStudent = null;
-let dormBuildings = [];
-let readingRooms = [];
+let rawData=[], filteredData=[], callHistory={}, currentCallStudent=null;
+let dormBuildings=[], readingRooms=[], sortAsc=true;
 
-// ── 유틸 ──
-function showToast(msg, type='success') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast ${type} show`;
-  setTimeout(() => t.className = 'toast', 3000);
-}
+function showToast(msg,type='success'){const t=document.getElementById('toast');t.textContent=msg;t.className=`toast ${type} show`;setTimeout(()=>t.className='toast',3000);}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
 
-function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
-}
-
-function showPanel(name) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+function showPanel(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(`panel-${name}`).classList.add('active');
-  event.target.classList.add('active');
-  if (name === 'history') loadHistory();
-  if (name === 'stats') loadStats();
-  if (name === 'vacancy') loadVacancy();
+  if(btn)btn.classList.add('active');
+  if(name==='history')loadHistory();
+  if(name==='stats')loadStats();
+  if(name==='vacancy'){loadVacancy();loadVacancyHistory();}
 }
 
-function doLogin() {
-  const email = document.getElementById('loginEmail').value;
-  const pw = document.getElementById('loginPw').value;
-  const { signInWithEmailAndPassword } = window._firebase;
-  signInWithEmailAndPassword(window._auth, email, pw)
-    .catch(e => {
-      const el = document.getElementById('loginError');
-      el.style.display = 'block';
-      el.textContent = '이메일 또는 비밀번호가 올바르지 않습니다.';
-    });
-}
-
-function doLogout() {
-  window._firebase.signOut(window._auth);
-}
-
-// ── APP INIT ──
-window.appInit = function() {
-  loadVacancy();
-  loadCallHistory();
-  // 오늘 날짜 기본값
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('fDate').value = today;
+window.appInit=function(){
+  loadVacancy(); loadCallHistory();
+  document.getElementById('fDate').value=new Date().toISOString().split('T')[0];
 };
 
-// ── 호출 이력 캐시 로드 ──
-async function loadCallHistory() {
-  const { collection, getDocs } = window._firebase;
-  const db = window._db;
-  try {
-    const snap = await getDocs(collection(db, 'callHistory'));
-    callHistory = {};
-    snap.forEach(d => {
-      const data = d.data();
-      callHistory[data.studentId] = { result: data.result, docId: d.id };
-    });
-  } catch(e) {}
+async function loadCallHistory(){
+  const {collection,getDocs}=window._firebase;
+  try{const snap=await getDocs(collection(window._db,'callHistory'));callHistory={};snap.forEach(d=>{const dt=d.data();callHistory[dt.studentId]={result:dt.result,docId:d.id};});}catch(e){}
 }
 
-// ── 엑셀 업로드 ──
-function handleExcelUpload(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(ev) {
-    const wb = XLSX.read(ev.target.result, { type: 'binary' });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-
-    const headers = json[0];
-    rawData = [];
-
-    for (let i = 1; i < json.length; i++) {
-      const row = json[i];
-      if (!row[0]) continue;
-      const obj = {};
-      headers.forEach((h, idx) => { obj[h] = row[idx] ?? ''; });
-      rawData.push(obj);
-    }
-
-    document.getElementById('uploadStatus').innerHTML =
-      `✅ <strong>${rawData.length}명</strong> 로드 완료 — ${file.name}`;
-    document.getElementById('filterCard').style.display = 'block';
-    document.getElementById('resultCard').style.display = 'none';
+function handleExcelUpload(e){
+  const file=e.target.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    const wb=XLSX.read(ev.target.result,{type:'binary'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const json=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    const headers=json[0]; rawData=[];
+    for(let i=1;i<json.length;i++){const row=json[i];if(!row[0])continue;const obj={};headers.forEach((h,idx)=>{obj[h]=row[idx]??'';});rawData.push(obj);}
+    document.getElementById('uploadStatus').innerHTML=`✅ <strong>${rawData.length}명</strong> 로드 완료 — ${file.name}`;
+    document.getElementById('filterCard').style.display='block';
+    document.getElementById('resultCard').style.display='none';
     showToast(`${rawData.length}명 대기자 로드 완료`);
+    loadCallHistory();
   };
   reader.readAsBinaryString(file);
 }
 
-// ── 전형명 매칭 ──
-function matchType(전형명, filter) {
-  if (!filter) return true;
-  return 전형명.includes(filter);
-}
+function isOneRoom(v){const t=String(v||'').toLowerCase();return t.includes('1인')||t.includes('일인');}
 
-// ── 1인실 판별 ──
-function isOneRoom(비고상세) {
-  const txt = String(비고상세 || '').toLowerCase();
-  return txt.includes('1인') || txt.includes('1인실') || txt.includes('일인');
-}
+function applyFilter(){
+  if(!rawData.length){showToast('먼저 엑셀 파일을 업로드해주세요','error');return;}
+  const gender=document.getElementById('fGender').value;
+  const type=document.getElementById('fType').value;
+  const room=document.getElementById('fRoom').value;
+  const priority=document.getElementById('fPriority').value;
+  const dateStr=document.getElementById('fDate').value;
+  const excl=document.getElementById('fExcludeSubject').value.trim();
+  const baseDate=dateStr?new Date(dateStr+'T23:59:59'):null;
 
-// ── 날짜 파싱 ──
-function parseDate(val) {
-  if (!val) return null;
-  const s = String(val).trim();
-  if (!s) return null;
-  // 다양한 형식 처리
-  const d = new Date(s);
-  if (!isNaN(d)) return d;
-  return null;
-}
-
-// ── 필터 적용 ──
-function applyFilter() {
-  if (!rawData.length) { showToast('먼저 엑셀 파일을 업로드해주세요', 'error'); return; }
-
-  const gender = document.getElementById('fGender').value;
-  const type = document.getElementById('fType').value;
-  const room = document.getElementById('fRoom').value;
-  const priority = document.getElementById('fPriority').value;
-  const dateStr = document.getElementById('fDate').value;
-  const excludeSubject = document.getElementById('fExcludeSubject').value.trim();
-  const baseDate = dateStr ? new Date(dateStr) : null;
-
-  filteredData = rawData.filter(row => {
-    // 성별
-    if (gender && String(row['성별'] || '').trim() !== gender) return false;
-    // 전형
-    if (type && !String(row['전형명'] || '').includes(type)) return false;
-    // 기숙사 유형
-    if (room === '1인실' && !isOneRoom(row['비고상세'])) return false;
-    if (room === '일반' && isOneRoom(row['비고상세'])) return false;
-    // 우선순위 (비고 '유' 여부)
-    const bigo = String(row['비고'] || '').trim();
-    const hasPriority = bigo.includes('유');
-    if (priority === 'Y' && !hasPriority) return false;
-    if (priority === 'N' && hasPriority) return false;
-    // 입소희망일
-    if (baseDate) {
-      const hope = parseDate(row['입소희망일']);
-      if (hope && hope > baseDate) return false;
-    }
-    // 선택과목 제외
-    if (excludeSubject) {
-      const s1 = String(row['수학선택'] || '');
-      const s2 = String(row['탐구1선택'] || '');
-      const s3 = String(row['탐구2선택'] || '');
-      const subjects = [s1, s2, s3].join(' ');
-      if (subjects.includes(excludeSubject)) return false;
-    }
+  filteredData=rawData.filter(row=>{
+    if(gender&&String(row['성별']||'').trim()!==gender)return false;
+    if(type&&!String(row['전형명']||'').includes(type))return false;
+    if(room==='1인실'&&!isOneRoom(row['비고상세']))return false;
+    if(room==='일반'&&isOneRoom(row['비고상세']))return false;
+    const bigo=String(row['비고']||'').trim();
+    const hasPri=bigo.includes('유');
+    if(priority==='Y'&&!hasPri)return false;
+    if(priority==='N'&&hasPri)return false;
+    if(baseDate){const hope=row['입소희망일']?new Date(String(row['입소희망일']).trim()):null;if(hope&&!isNaN(hope)&&hope>baseDate)return false;}
+    if(excl){const subs=[row['수학선택'],row['탐구1선택'],row['탐구2선택']].join(' ');if(subs.includes(excl))return false;}
     return true;
   });
 
-  // 우선순위 먼저, 그 다음 순번순
-  filteredData.sort((a, b) => {
-    const ap = String(a['비고'] || '').includes('유') ? 0 : 1;
-    const bp = String(b['비고'] || '').includes('유') ? 0 : 1;
-    if (ap !== bp) return ap - bp;
-    return Number(a['순번'] || 9999) - Number(b['순번'] || 9999);
+  filteredData.sort((a,b)=>{
+    const ap=String(a['비고']||'').includes('유')?0:1;
+    const bp=String(b['비고']||'').includes('유')?0:1;
+    if(ap!==bp)return ap-bp;
+    return Number(a['순번']||9999)-Number(b['순번']||9999);
   });
-
   renderResult();
 }
 
-// ── 결과 렌더 ──
-function renderResult() {
-  const tbody = document.getElementById('resultBody');
-  const empty = document.getElementById('resultEmpty');
-  const card = document.getElementById('resultCard');
-  card.style.display = 'block';
-
-  document.getElementById('resultCount').textContent = `(${filteredData.length}명)`;
-
-  if (!filteredData.length) {
-    tbody.innerHTML = '';
-    empty.style.display = 'block';
-    return;
-  }
-  empty.style.display = 'none';
-
-  tbody.innerHTML = filteredData.map((row, idx) => {
-    const isPriority = String(row['비고'] || '').includes('유');
-    const gender = String(row['성별'] || '').trim();
-    const typeName = String(row['전형명'] || '').trim();
-    const studentId = String(row['수험번호'] || '').trim();
-    const hist = callHistory[studentId];
-    const histResult = hist ? hist.result : null;
-
-    const gBadge = gender === '남'
-      ? `<span class="badge-pill badge-male">남</span>`
-      : `<span class="badge-pill badge-female">여</span>`;
-
-    const typeBadge = getTypeBadge(typeName);
-    const priBadge = isPriority
-      ? `<span class="badge-pill badge-priority">★ 우선</span>`
-      : '';
-
-    const resultBadge = histResult
-      ? getResultBadge(histResult)
-      : `<span class="badge-pill badge-normal">-</span>`;
-
-    return `<tr class="${isPriority ? 'priority-row' : ''}">
-      <td>${priBadge}</td>
-      <td><span class="rank-num">${row['순번'] || '-'}</span></td>
-      <td><strong>${row['성명'] || ''}</strong></td>
-      <td>${gBadge}</td>
-      <td>${typeBadge}</td>
-      <td style="font-family:var(--mono);font-size:12px;">${row['학생 연락처'] || ''}</td>
-      <td style="font-family:var(--mono);font-size:12px;">${row['입소희망일'] || ''}</td>
-      <td><span class="info-chip">${row['수학선택'] || '-'}</span></td>
-      <td><span class="info-chip">${row['탐구1선택'] || '-'}</span><span class="info-chip">${row['탐구2선택'] || '-'}</span></td>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:var(--text2);">${String(row['비고상세'] || '').substring(0, 40)}</td>
-      <td>${resultBadge}</td>
-      <td>
-        <button class="btn btn-green" style="padding:4px 10px;font-size:12px;" onclick="openCallModal(${idx})">
-          ${histResult ? '재호출' : '호출'}
-        </button>
-      </td>
+function renderResult(){
+  const tbody=document.getElementById('resultBody');
+  const empty=document.getElementById('resultEmpty');
+  document.getElementById('resultCard').style.display='block';
+  document.getElementById('resultCount').textContent=`(${filteredData.length}명)`;
+  if(!filteredData.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  tbody.innerHTML=filteredData.map((row,idx)=>{
+    const isPri=String(row['비고']||'').includes('유');
+    const g=String(row['성별']||'').trim();
+    const tn=String(row['전형명']||'').trim();
+    const sid=String(row['수험번호']||'').trim();
+    const hist=callHistory[sid];
+    const hr=hist?hist.result:null;
+    const gB=g==='남'?`<span class="badge-pill badge-male">남</span>`:`<span class="badge-pill badge-female">여</span>`;
+    const priB=isPri?`<span class="badge-pill badge-priority">★ 우선</span>`:'';
+    const resB=hr?getResultBadge(hr):`<span class="badge-pill badge-normal">-</span>`;
+    const bigo=String(row['비고상세']||'');
+    return `<tr class="${isPri?'priority-row':''}">
+      <td>${priB}</td>
+      <td><span class="rank-num">${row['순번']||'-'}</span></td>
+      <td><strong>${row['성명']||''}</strong></td>
+      <td>${gB}</td>
+      <td>${getTypeBadge(tn)}</td>
+      <td style="font-family:var(--mono);font-size:12px;">${row['학생 연락처']||''}</td>
+      <td style="font-family:var(--mono);font-size:12px;">${row['학부모 연락처']||''}</td>
+      <td style="font-family:var(--mono);font-size:12px;">${row['입소희망일']||''}</td>
+      <td><span class="info-chip">${row['수학선택']||'-'}</span></td>
+      <td><span class="info-chip">${row['탐구1선택']||'-'}</span><span class="info-chip">${row['탐구2선택']||'-'}</span></td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:var(--text2);" title="${bigo}">${bigo.substring(0,35)}${bigo.length>35?'…':''}</td>
+      <td>${resB}</td>
+      <td><button class="btn ${hr?'btn-ghost':'btn-green'} btn-sm" onclick="openCallModal(${idx})">${hr?'재호출':'호출'}</button></td>
     </tr>`;
   }).join('');
 }
 
-function getTypeBadge(name) {
-  if (name.includes('메디컬')) return `<span class="badge-pill badge-medical">메디컬</span>`;
-  if (name.includes('우선선발')) return `<span class="badge-pill badge-priority-type">우선선발</span>`;
-  if (name.includes('선착순')) return `<span class="badge-pill badge-first">선착순</span>`;
-  if (name.includes('면접')) return `<span class="badge-pill badge-interview">면접</span>`;
-  if (name.includes('특별')) return `<span class="badge-pill badge-special">특별</span>`;
-  return `<span class="badge-pill badge-normal">${name.substring(0,6)}</span>`;
+function getTypeBadge(n){
+  if(n.includes('메디컬'))return`<span class="badge-pill badge-medical">메디컬</span>`;
+  if(n.includes('우선선발'))return`<span class="badge-pill badge-priority-type">우선선발</span>`;
+  if(n.includes('선착순'))return`<span class="badge-pill badge-first">선착순</span>`;
+  if(n.includes('면접'))return`<span class="badge-pill badge-interview">면접</span>`;
+  if(n.includes('특별'))return`<span class="badge-pill badge-special">특별</span>`;
+  return`<span class="badge-pill badge-normal">${n.substring(0,6)}</span>`;
+}
+function getResultBadge(r){
+  if(r==='입소확정')return`<span class="badge-pill badge-enrolled">입소확정</span>`;
+  if(r==='미응답')return`<span class="badge-pill badge-nocall">미응답</span>`;
+  if(r==='거절')return`<span class="badge-pill badge-nocall">거절</span>`;
+  if(r==='호출됨')return`<span class="badge-pill badge-called">호출됨</span>`;
+  return`<span class="badge-pill badge-normal">${r}</span>`;
 }
 
-function getResultBadge(result) {
-  if (result === '입소확정') return `<span class="badge-pill badge-enrolled">입소확정</span>`;
-  if (result === '미응답') return `<span class="badge-pill badge-nocall">미응답</span>`;
-  if (result === '거절') return `<span class="badge-pill badge-nocall">거절</span>`;
-  if (result === '호출됨') return `<span class="badge-pill badge-called">호출됨</span>`;
-  return `<span class="badge-pill badge-normal">${result}</span>`;
-}
-
-// ── 호출 모달 ──
-function openCallModal(idx) {
-  currentCallStudent = filteredData[idx];
-  const s = currentCallStudent;
-  document.getElementById('callStudentInfo').innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-      <div><span style="color:var(--text2);">성명</span> <strong>${s['성명'] || ''}</strong></div>
-      <div><span style="color:var(--text2);">순번</span> <strong>${s['순번'] || ''}</strong></div>
-      <div><span style="color:var(--text2);">전형</span> <strong>${s['전형명'] || ''}</strong></div>
-      <div><span style="color:var(--text2);">성별</span> <strong>${s['성별'] || ''}</strong></div>
-      <div><span style="color:var(--text2);">연락처</span> <strong style="font-family:var(--mono);">${s['학생 연락처'] || ''}</strong></div>
-      <div><span style="color:var(--text2);">학부모</span> <strong style="font-family:var(--mono);">${s['학부모 연락처'] || ''}</strong></div>
-    </div>
-  `;
-  document.getElementById('callResult').value = '호출됨';
-  document.getElementById('callMemo').value = '';
+function openCallModal(idx){
+  currentCallStudent=filteredData[idx];const s=currentCallStudent;
+  document.getElementById('callStudentInfo').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div><span style="color:var(--text2);font-size:11px;">성명</span><br><strong>${s['성명']||''}</strong></div>
+      <div><span style="color:var(--text2);font-size:11px;">순번</span><br><strong>${s['순번']||''}</strong></div>
+      <div><span style="color:var(--text2);font-size:11px;">전형</span><br><strong>${s['전형명']||''}</strong></div>
+      <div><span style="color:var(--text2);font-size:11px;">성별</span><br><strong>${s['성별']||''}</strong></div>
+      <div><span style="color:var(--text2);font-size:11px;">학생 연락처</span><br><strong style="font-family:var(--mono);">${s['학생 연락처']||''}</strong></div>
+      <div><span style="color:var(--text2);font-size:11px;">학부모 연락처</span><br><strong style="font-family:var(--mono);">${s['학부모 연락처']||''}</strong></div>
+    </div>`;
+  document.getElementById('callResult').value='호출됨';
+  document.getElementById('callMemo').value='';
   document.getElementById('callModal').classList.add('open');
 }
 
-async function saveCall() {
-  const s = currentCallStudent;
-  if (!s) return;
-  const result = document.getElementById('callResult').value;
-  const memo = document.getElementById('callMemo').value;
-  const { collection, addDoc, serverTimestamp } = window._firebase;
-  const db = window._db;
-  const user = window._auth.currentUser;
-
-  try {
-    await addDoc(collection(db, 'callHistory'), {
-      studentId: String(s['수험번호'] || ''),
-      name: String(s['성명'] || ''),
-      gender: String(s['성별'] || ''),
-      typeName: String(s['전형명'] || ''),
-      rank: String(s['순번'] || ''),
-      phone: String(s['학생 연락처'] || ''),
-      result,
-      memo,
-      calledBy: user ? user.email : '',
-      calledAt: serverTimestamp()
+async function saveCall(){
+  const s=currentCallStudent; if(!s)return;
+  const result=document.getElementById('callResult').value;
+  const memo=document.getElementById('callMemo').value;
+  const {collection,addDoc,serverTimestamp}=window._firebase;
+  try{
+    await addDoc(collection(window._db,'callHistory'),{
+      studentId:String(s['수험번호']||''),name:String(s['성명']||''),
+      gender:String(s['성별']||''),typeName:String(s['전형명']||''),
+      rank:String(s['순번']||''),phone:String(s['학생 연락처']||''),
+      result,memo,calledAt:serverTimestamp()
     });
-    callHistory[String(s['수험번호'] || '')] = { result };
-    closeModal('callModal');
-    showToast(`${s['성명']} 호출 처리 완료`);
-    renderResult();
-  } catch(e) {
-    showToast('저장 실패: ' + e.message, 'error');
-  }
+    callHistory[String(s['수험번호']||'')]={result};
+    closeModal('callModal');showToast(`${s['성명']} 호출 처리 완료`);renderResult();
+  }catch(e){showToast('저장 실패: '+e.message,'error');}
 }
 
-// ── 여석 관리 ──
-async function loadVacancy() {
-  const { doc, getDoc } = window._firebase;
-  const db = window._db;
-  try {
-    const snap = await getDoc(doc(db, 'settings', 'vacancy'));
-    const data = snap.exists() ? snap.data() : {};
-    dormBuildings = data.dormBuildings || [
-      { name: '남생관', gender: '남', singles: 0, general: 0 },
-      { name: '여생관', gender: '여', singles: 0, general: 0 }
-    ];
-    readingRooms = data.readingRooms || [
-      { name: '메디컬반', seats: 0 },
-      { name: '우선선발반', seats: 0 }
-    ];
-    renderDormVacancy();
-    renderReadingVacancy();
-    renderVacancyInfo();
-  } catch(e) {}
+// 여석 관리
+async function loadVacancy(){
+  const {doc,getDoc}=window._firebase;
+  try{
+    const snap=await getDoc(doc(window._db,'settings','vacancy'));
+    const data=snap.exists()?snap.data():{};
+    dormBuildings=data.dormBuildings||[{name:'남생관',gender:'남',singles:0,general:0},{name:'여생관',gender:'여',singles:0,general:0}];
+    readingRooms=data.readingRooms||[{name:'메디컬반',seats:0},{name:'우선선발반',seats:0}];
+    renderDormVacancy();renderReadingVacancy();renderVacancyInfoBar();
+  }catch(e){}
 }
 
-function renderDormVacancy() {
-  const el = document.getElementById('dormVacancy');
-  el.innerHTML = dormBuildings.map((b, i) => `
-    <div class="vacancy-card" style="margin-bottom:8px;">
+function renderDormVacancy(){
+  document.getElementById('dormVacancy').innerHTML=dormBuildings.map((b,i)=>`
+    <div class="vacancy-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <input value="${b.name}" onchange="dormBuildings[${i}].name=this.value"
-          style="background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:13px;font-weight:700;width:120px;padding:2px 0;">
+        <input value="${b.name}" onchange="dormBuildings[${i}].name=this.value" style="background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:13px;font-weight:700;width:120px;padding:2px 0;outline:none;">
         <div style="display:flex;gap:6px;align-items:center;">
           <select onchange="dormBuildings[${i}].gender=this.value" style="padding:4px 8px;font-size:12px;min-width:70px;">
             <option value="남" ${b.gender==='남'?'selected':''}>남자</option>
             <option value="여" ${b.gender==='여'?'selected':''}>여자</option>
             <option value="공용" ${b.gender==='공용'?'selected':''}>공용</option>
           </select>
-          <button onclick="dormBuildings.splice(${i},1);renderDormVacancy()" style="background:none;border:none;color:var(--accent2);cursor:pointer;font-size:16px;">×</button>
+          <button onclick="dormBuildings.splice(${i},1);renderDormVacancy()" style="background:none;border:none;color:var(--accent2);cursor:pointer;font-size:18px;">×</button>
         </div>
       </div>
-      <div class="vacancy-row">
-        <label>1인실</label>
-        <input type="number" class="vacancy-input" value="${b.singles}" min="0" onchange="dormBuildings[${i}].singles=+this.value">
-      </div>
-      <div class="vacancy-row">
-        <label>일반실(2~4인)</label>
-        <input type="number" class="vacancy-input" value="${b.general}" min="0" onchange="dormBuildings[${i}].general=+this.value">
-      </div>
-    </div>
-  `).join('');
+      <div class="vacancy-row"><label>1인실 여석</label><input type="number" class="vacancy-input" value="${b.singles}" min="0" onchange="dormBuildings[${i}].singles=+this.value"></div>
+      <div class="vacancy-row" style="margin-bottom:0;"><label>일반실(2~4인) 여석</label><input type="number" class="vacancy-input" value="${b.general}" min="0" onchange="dormBuildings[${i}].general=+this.value"></div>
+    </div>`).join('');
 }
 
-function renderReadingVacancy() {
-  const el = document.getElementById('readingVacancy');
-  el.innerHTML = readingRooms.map((r, i) => `
-    <div class="vacancy-card" style="margin-bottom:8px;">
+function renderReadingVacancy(){
+  document.getElementById('readingVacancy').innerHTML=readingRooms.map((r,i)=>`
+    <div class="vacancy-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <input value="${r.name}" onchange="readingRooms[${i}].name=this.value"
-          style="background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:13px;font-weight:700;width:150px;padding:2px 0;">
-        <button onclick="readingRooms.splice(${i},1);renderReadingVacancy()" style="background:none;border:none;color:var(--accent2);cursor:pointer;font-size:16px;">×</button>
+        <input value="${r.name}" onchange="readingRooms[${i}].name=this.value" style="background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:13px;font-weight:700;width:150px;padding:2px 0;outline:none;">
+        <button onclick="readingRooms.splice(${i},1);renderReadingVacancy()" style="background:none;border:none;color:var(--accent2);cursor:pointer;font-size:18px;">×</button>
       </div>
-      <div class="vacancy-row">
-        <label>여석</label>
-        <input type="number" class="vacancy-input" value="${r.seats}" min="0" onchange="readingRooms[${i}].seats=+this.value">
-      </div>
-    </div>
-  `).join('');
+      <div class="vacancy-row" style="margin-bottom:0;"><label>여석</label><input type="number" class="vacancy-input" value="${r.seats}" min="0" onchange="readingRooms[${i}].seats=+this.value"></div>
+    </div>`).join('');
 }
 
-function renderVacancyInfo() {
-  const el = document.getElementById('vacancyInfo');
-  if (!el) return;
-  const dormStr = dormBuildings.map(b => `${b.name}(${b.gender}) 1인:${b.singles} 일반:${b.general}`).join(' | ');
-  const readStr = readingRooms.map(r => `${r.name}:${r.seats}석`).join(' | ');
-  el.innerHTML = `
-    <div style="display:flex;flex-wrap:wrap;gap:8px;">
-      <span>🏠 기숙사 — ${dormStr || '미입력'}</span>
-      <span style="color:var(--border);">|</span>
-      <span>📚 독서실 — ${readStr || '미입력'}</span>
-    </div>
-  `;
+function renderVacancyInfoBar(){
+  const el=document.getElementById('vacancyInfo');if(!el)return;
+  const ds=dormBuildings.map(b=>`${b.name}(${b.gender}) 1인:${b.singles} 일반:${b.general}`).join(' | ');
+  const rs=readingRooms.map(r=>`${r.name}:${r.seats}석`).join(' | ');
+  el.innerHTML=`🏠 기숙사 — ${ds||'미입력'} &nbsp;|&nbsp; 📚 독서실 — ${rs||'미입력'}`;
 }
 
-function addDormBuilding() {
-  dormBuildings.push({ name: '새 기숙사', gender: '남', singles: 0, general: 0 });
-  renderDormVacancy();
+function addDormBuilding(){dormBuildings.push({name:'새 기숙사',gender:'남',singles:0,general:0});renderDormVacancy();}
+function addReadingRoom(){readingRooms.push({name:'새 전형반',seats:0});renderReadingVacancy();}
+
+async function saveVacancy(){
+  const {doc,setDoc,addDoc,collection,serverTimestamp}=window._firebase;
+  try{
+    await setDoc(doc(window._db,'settings','vacancy'),{dormBuildings,readingRooms});
+    await addDoc(collection(window._db,'vacancyHistory'),{dormBuildings:JSON.stringify(dormBuildings),readingRooms:JSON.stringify(readingRooms),savedAt:serverTimestamp()});
+    showToast('여석 정보 저장 완료');renderVacancyInfoBar();loadVacancyHistory();
+  }catch(e){showToast('저장 실패: '+e.message,'error');}
 }
 
-function addReadingRoom() {
-  readingRooms.push({ name: '새 전형반', seats: 0 });
-  renderReadingVacancy();
-}
-
-async function saveVacancy() {
-  const { doc, setDoc, addDoc, collection, serverTimestamp } = window._firebase;
-  const db = window._db;
-  const user = window._auth.currentUser;
-  try {
-    await setDoc(doc(db, 'settings', 'vacancy'), { dormBuildings, readingRooms });
-    await addDoc(collection(db, 'vacancyHistory'), {
-      dormBuildings: JSON.stringify(dormBuildings),
-      readingRooms: JSON.stringify(readingRooms),
-      savedBy: user ? user.email : '',
-      savedAt: serverTimestamp()
+async function loadVacancyHistory(){
+  const {collection,getDocs,query,orderBy}=window._firebase;
+  const tbody=document.getElementById('vacancyHistoryBody');
+  try{
+    const q=query(collection(window._db,'vacancyHistory'),orderBy('savedAt','desc'));
+    const snap=await getDocs(q);
+    if(snap.empty){tbody.innerHTML='<tr><td colspan="3" style="text-align:center;color:var(--text2);padding:20px;">이력 없음</td></tr>';return;}
+    tbody.innerHTML='';
+    snap.forEach(d=>{
+      const dt=d.data();
+      const date=dt.savedAt?new Date(dt.savedAt.toDate()).toLocaleString('ko-KR'):'-';
+      let ds='-',rs='-';
+      try{ds=JSON.parse(dt.dormBuildings||'[]').map(b=>`${b.name} 1인:${b.singles} 일반:${b.general}`).join(', ');rs=JSON.parse(dt.readingRooms||'[]').map(r=>`${r.name}:${r.seats}석`).join(', ');}catch(e){}
+      tbody.innerHTML+=`<tr><td style="font-family:var(--mono);font-size:12px;">${date}</td><td style="font-size:12px;">${ds}</td><td style="font-size:12px;">${rs}</td></tr>`;
     });
-    showToast('여석 정보 저장 완료');
-    renderVacancyInfo();
-    loadVacancyHistory();
-  } catch(e) {
-    showToast('저장 실패: ' + e.message, 'error');
-  }
+  }catch(e){}
 }
 
-async function loadVacancyHistory() {
-  const { collection, getDocs, query, orderBy } = window._firebase;
-  const db = window._db;
-  const tbody = document.getElementById('vacancyHistoryBody');
-  try {
-    const q = query(collection(db, 'vacancyHistory'), orderBy('savedAt', 'desc'));
-    const snap = await getDocs(q);
-    if (snap.empty) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:20px;">이력 없음</td></tr>'; return; }
-    tbody.innerHTML = '';
-    snap.forEach(d => {
-      const data = d.data();
-      const date = data.savedAt ? new Date(data.savedAt.toDate()).toLocaleString('ko-KR') : '-';
-      let dormStr = '-', readStr = '-';
-      try {
-        const dorms = JSON.parse(data.dormBuildings || '[]');
-        dormStr = dorms.map(b => `${b.name} 1인:${b.singles} 일반:${b.general}`).join(', ');
-        const reads = JSON.parse(data.readingRooms || '[]');
-        readStr = reads.map(r => `${r.name}:${r.seats}석`).join(', ');
-      } catch(e) {}
-      tbody.innerHTML += `<tr>
+// 호출 이력
+async function loadHistory(){
+  const {collection,getDocs,query,orderBy}=window._firebase;
+  const tbody=document.getElementById('historyBody');
+  const empty=document.getElementById('historyEmpty');
+  const tf=document.getElementById('hfType').value;
+  const rf=document.getElementById('hfResult').value;
+  try{
+    const q=query(collection(window._db,'callHistory'),orderBy('calledAt','desc'));
+    const snap=await getDocs(q);
+    let rows=[];snap.forEach(d=>rows.push({id:d.id,...d.data()}));
+    if(tf)rows=rows.filter(r=>String(r.typeName||'').includes(tf));
+    if(rf)rows=rows.filter(r=>r.result===rf);
+    if(!rows.length){tbody.innerHTML='';empty.style.display='block';return;}
+    empty.style.display='none';
+    tbody.innerHTML=rows.map(r=>{
+      const date=r.calledAt?new Date(r.calledAt.toDate()).toLocaleString('ko-KR'):'-';
+      return`<tr>
         <td style="font-family:var(--mono);font-size:12px;">${date}</td>
-        <td>${data.savedBy || '-'}</td>
-        <td style="font-size:12px;">${dormStr}</td>
-        <td style="font-size:12px;">${readStr}</td>
-      </tr>`;
-    });
-  } catch(e) {}
-}
-
-// ── 호출 이력 ──
-async function loadHistory() {
-  const { collection, getDocs, query, orderBy, where } = window._firebase;
-  const db = window._db;
-  const tbody = document.getElementById('historyBody');
-  const empty = document.getElementById('historyEmpty');
-  const typeF = document.getElementById('hfType').value;
-  const resultF = document.getElementById('hfResult').value;
-
-  try {
-    let q = query(collection(db, 'callHistory'), orderBy('calledAt', 'desc'));
-    const snap = await getDocs(q);
-    let rows = [];
-    snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
-    if (typeF) rows = rows.filter(r => String(r.typeName || '').includes(typeF));
-    if (resultF) rows = rows.filter(r => r.result === resultF);
-
-    if (!rows.length) {
-      tbody.innerHTML = '';
-      empty.style.display = 'block';
-      return;
-    }
-    empty.style.display = 'none';
-    tbody.innerHTML = rows.map(r => {
-      const date = r.calledAt ? new Date(r.calledAt.toDate()).toLocaleString('ko-KR') : '-';
-      return `<tr>
-        <td style="font-family:var(--mono);font-size:12px;">${date}</td>
-        <td><strong>${r.name || ''}</strong></td>
-        <td>${r.gender === '남' ? '<span class="badge-pill badge-male">남</span>' : '<span class="badge-pill badge-female">여</span>'}</td>
-        <td>${getTypeBadge(r.typeName || '')}</td>
-        <td><span class="rank-num">${r.rank || '-'}</span></td>
-        <td style="font-family:var(--mono);font-size:12px;">${r.phone || ''}</td>
-        <td style="font-size:12px;color:var(--text2);">${r.calledBy || ''}</td>
-        <td>${getResultBadge(r.result || '')}</td>
-        <td style="font-size:12px;color:var(--text2);max-width:150px;overflow:hidden;text-overflow:ellipsis;">${r.memo || ''}</td>
-        <td><button class="btn btn-ghost" style="padding:4px 10px;font-size:12px;" onclick="openEditModal('${r.id}','${r.result}',\`${(r.memo||'').replace(/`/g,"'")}\`)">수정</button></td>
+        <td><strong>${r.name||''}</strong></td>
+        <td>${r.gender==='남'?'<span class="badge-pill badge-male">남</span>':'<span class="badge-pill badge-female">여</span>'}</td>
+        <td>${getTypeBadge(r.typeName||'')}</td>
+        <td><span class="rank-num">${r.rank||'-'}</span></td>
+        <td style="font-family:var(--mono);font-size:12px;">${r.phone||''}</td>
+        <td>${getResultBadge(r.result||'')}</td>
+        <td style="font-size:12px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;">${r.memo||''}</td>
+        <td><button class="btn btn-ghost btn-sm" onclick="openEditModal('${r.id}','${r.result}',\`${(r.memo||'').replace(/`/g,"'")}\`)">수정</button></td>
       </tr>`;
     }).join('');
-  } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--accent2);padding:20px;">${e.message}</td></tr>`;
-  }
+  }catch(e){tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;color:var(--accent2);padding:20px;">${e.message}</td></tr>`;}
 }
 
-function openEditModal(docId, result, memo) {
-  document.getElementById('editDocId').value = docId;
-  document.getElementById('editResult').value = result;
-  document.getElementById('editMemo').value = memo;
+function openEditModal(docId,result,memo){
+  document.getElementById('editDocId').value=docId;
+  document.getElementById('editResult').value=result;
+  document.getElementById('editMemo').value=memo;
   document.getElementById('editModal').classList.add('open');
 }
 
-async function updateCall() {
-  const { doc, updateDoc } = window._firebase;
-  const db = window._db;
-  const docId = document.getElementById('editDocId').value;
-  const result = document.getElementById('editResult').value;
-  const memo = document.getElementById('editMemo').value;
-  try {
-    await updateDoc(doc(db, 'callHistory', docId), { result, memo });
-    closeModal('editModal');
-    showToast('수정 완료');
-    loadHistory();
-    await loadCallHistory();
-    if (filteredData.length) renderResult();
-  } catch(e) {
-    showToast('수정 실패: ' + e.message, 'error');
-  }
+async function updateCall(){
+  const {doc,updateDoc}=window._firebase;
+  const docId=document.getElementById('editDocId').value;
+  const result=document.getElementById('editResult').value;
+  const memo=document.getElementById('editMemo').value;
+  try{
+    await updateDoc(doc(window._db,'callHistory',docId),{result,memo});
+    closeModal('editModal');showToast('수정 완료');loadHistory();
+    await loadCallHistory();if(filteredData.length)renderResult();
+  }catch(e){showToast('수정 실패: '+e.message,'error');}
 }
 
-// ── 통계 ──
-async function loadStats() {
-  const { collection, getDocs } = window._firebase;
-  const db = window._db;
-  try {
-    const snap = await getDocs(collection(db, 'callHistory'));
-    let rows = [];
-    snap.forEach(d => rows.push(d.data()));
-
-    document.getElementById('sTotalWaiting').textContent = rawData.length || '-';
-    document.getElementById('sTotalCalled').textContent = rows.length;
-    document.getElementById('sTotalEnrolled').textContent = rows.filter(r => r.result === '입소확정').length;
-    document.getElementById('sTotalFailed').textContent = rows.filter(r => r.result === '미응답' || r.result === '거절').length;
-
-    // 전형별
-    const types = ['메디컬', '우선선발', '선착순', '면접', '특별'];
-    const statsBody = document.getElementById('statsTypeBody');
-    statsBody.innerHTML = types.map(t => {
-      const tRows = rows.filter(r => String(r.typeName || '').includes(t));
-      const enrolled = tRows.filter(r => r.result === '입소확정').length;
-      const noAnswer = tRows.filter(r => r.result === '미응답').length;
-      const reject = tRows.filter(r => r.result === '거절').length;
-      const rate = tRows.length ? Math.round(enrolled/tRows.length*100) : 0;
-      return `<tr>
-        <td>${getTypeBadge(t + ' 전형')}</td>
-        <td><span class="rank-num">${tRows.length}</span></td>
-        <td><span style="color:var(--accent3);">${enrolled}</span></td>
-        <td><span style="color:var(--text2);">${noAnswer}</span></td>
-        <td><span style="color:var(--accent2);">${reject}</span></td>
-        <td><span style="font-family:var(--mono);">${rate}%</span></td>
-      </tr>`;
+// 통계
+async function loadStats(){
+  const {collection,getDocs}=window._firebase;
+  try{
+    const snap=await getDocs(collection(window._db,'callHistory'));
+    let rows=[];snap.forEach(d=>rows.push(d.data()));
+    document.getElementById('sTotalWaiting').textContent=rawData.length||'-';
+    document.getElementById('sTotalCalled').textContent=rows.length;
+    document.getElementById('sTotalEnrolled').textContent=rows.filter(r=>r.result==='입소확정').length;
+    document.getElementById('sTotalFailed').textContent=rows.filter(r=>r.result==='미응답'||r.result==='거절').length;
+    document.getElementById('statsTypeBody').innerHTML=['메디컬','우선선발','선착순','면접','특별'].map(t=>{
+      const tr=rows.filter(r=>String(r.typeName||'').includes(t));
+      const en=tr.filter(r=>r.result==='입소확정').length;
+      const na=tr.filter(r=>r.result==='미응답').length;
+      const rej=tr.filter(r=>r.result==='거절').length;
+      const rate=tr.length?Math.round(en/tr.length*100):0;
+      return`<tr><td>${getTypeBadge(t+' 전형')}</td><td><strong>${tr.length}</strong></td><td style="color:var(--accent3);">${en}</td><td style="color:var(--text2);">${na}</td><td style="color:var(--accent2);">${rej}</td><td style="font-family:var(--mono);">${rate}%</td></tr>`;
     }).join('');
-
-    // 성별
-    const genders = ['남', '여'];
-    const gBody = document.getElementById('statsGenderBody');
-    gBody.innerHTML = genders.map(g => {
-      const gRows = rows.filter(r => r.gender === g);
-      const enrolled = gRows.filter(r => r.result === '입소확정').length;
-      const rate = gRows.length ? Math.round(enrolled/gRows.length*100) : 0;
-      return `<tr>
-        <td>${g === '남' ? '<span class="badge-pill badge-male">남자</span>' : '<span class="badge-pill badge-female">여자</span>'}</td>
-        <td><span class="rank-num">${gRows.length}</span></td>
-        <td><span style="color:var(--accent3);">${enrolled}</span></td>
-        <td><span style="font-family:var(--mono);">${rate}%</span></td>
-      </tr>`;
+    document.getElementById('statsGenderBody').innerHTML=['남','여'].map(g=>{
+      const gr=rows.filter(r=>r.gender===g);
+      const en=gr.filter(r=>r.result==='입소확정').length;
+      const rate=gr.length?Math.round(en/gr.length*100):0;
+      return`<tr><td>${g==='남'?'<span class="badge-pill badge-male">남자</span>':'<span class="badge-pill badge-female">여자</span>'}</td><td><strong>${gr.length}</strong></td><td style="color:var(--accent3);">${en}</td><td style="font-family:var(--mono);">${rate}%</td></tr>`;
     }).join('');
-
-  } catch(e) {
-    showToast('통계 로드 실패: ' + e.message, 'error');
-  }
+  }catch(e){showToast('통계 로드 실패: '+e.message,'error');}
 }
 
-// ── 결과 저장 ──
-function exportResult() {
-  if (!filteredData.length) return;
-  const wb = XLSX.utils.book_new();
-  const rows = filteredData.map(r => ({
-    순번: r['순번'], 성명: r['성명'], 성별: r['성별'],
-    전형명: r['전형명'], 연락처: r['학생 연락처'],
-    입소희망일: r['입소희망일'], 수학선택: r['수학선택'],
-    탐구1: r['탐구1선택'], 탐구2: r['탐구2선택'],
-    비고상세: r['비고상세'],
-    호출상태: callHistory[String(r['수험번호'] || '')] ? callHistory[String(r['수험번호'] || '')].result : '-'
-  }));
-  const ws = XLSX.utils.json_to_sheet(rows);
-  XLSX.utils.book_append_sheet(wb, ws, '필터결과');
-  XLSX.writeFile(wb, `호출대상_${new Date().toISOString().split('T')[0]}.xlsx`);
+function exportResult(){
+  if(!filteredData.length)return;
+  const rows=filteredData.map(r=>({순번:r['순번'],성명:r['성명'],성별:r['성별'],전형명:r['전형명'],학생연락처:r['학생 연락처'],학부모연락처:r['학부모 연락처'],입소희망일:r['입소희망일'],수학선택:r['수학선택'],탐구1:r['탐구1선택'],탐구2:r['탐구2선택'],비고상세:r['비고상세'],호출상태:callHistory[String(r['수험번호']||'')]?callHistory[String(r['수험번호']||'')].result:'-'}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'필터결과');
+  XLSX.writeFile(wb,`호출대상_${new Date().toISOString().split('T')[0]}.xlsx`);
   showToast('엑셀 저장 완료');
 }
 
-let sortAsc = true;
-function toggleSort() {
-  sortAsc = !sortAsc;
-  filteredData.sort((a, b) => {
-    const av = Number(a['순번'] || 9999);
-    const bv = Number(b['순번'] || 9999);
-    return sortAsc ? av - bv : bv - av;
-  });
+function toggleSort(){
+  sortAsc=!sortAsc;
+  filteredData.sort((a,b)=>{const av=Number(a['순번']||9999);const bv=Number(b['순번']||9999);return sortAsc?av-bv:bv-av;});
   renderResult();
 }
 
-// 모달 바깥 클릭 닫기
-document.querySelectorAll('.modal-overlay').forEach(el => {
-  el.addEventListener('click', function(e) {
-    if (e.target === this) this.classList.remove('open');
-  });
+document.querySelectorAll('.modal-overlay').forEach(el=>{
+  el.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 });
 </script>
 </body>
